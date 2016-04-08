@@ -1,0 +1,58 @@
+#!/usr/bin/perl
+#
+# Copyright (C) 2013-2016 Oliver Hitz <oliver@net-track.ch>
+#
+use strict;
+
+$|=1;
+
+if ($#ARGV < 0 || $#ARGV > 1) {
+  printf STDERR "Usage: $0 INTERFACE [SECS]\n";
+  exit 1;
+}
+
+my $interface = shift @ARGV;
+my $seconds = 1;
+if ($#ARGV == 0) {
+  $seconds = shift @ARGV;
+}
+
+my @l = get_counters($interface);
+
+while (1) {
+  sleep $seconds;
+
+  my @c = get_counters($interface);
+  my @t= @c;
+
+  $t[0] -= $l[0];
+  $t[1] -= $l[1];
+  $t[2] -= $l[2];
+  $t[3] -= $l[3];
+
+  @l = @c;
+
+  print "\r\x1b[K";
+  printf "in: %3d mbps (%4d pps), out: %3d mbps (%4d pps)",
+         int(($t[0] * 8) / ($seconds*1024*1024)),
+         int($t[2]/$seconds),
+         int(($t[1] * 8) / ($seconds*1024*1024)),
+         int($t[3]/$seconds);
+}
+
+sub get_counters()
+{
+  my $if = shift;
+
+  open N, "/proc/net/dev";
+  while (my $li = <N>) {
+    if ($li =~ /^\s*($if):\s*(.*)$/) {
+      my @data = split /\s+/, $2;
+      close N;
+      return ($data[0], $data[8], $data[1], $data[9]);
+    }
+  }
+  close N;
+
+  return (0, 0, 0, 0); 
+}
