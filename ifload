@@ -2,42 +2,110 @@
 #
 # Copyright (C) 2013-2016 Oliver Hitz <oliver@net-track.ch>
 #
+
+=head1 NAME
+
+ifload
+
+=head1 SYNOPSIS
+
+ifload [OPTIONS] I<INTERFACE> [I<AVG-SECS>]
+
+=head1 OPTIONS
+
+=over
+
+=item B<--help>
+
+Show help message.
+
+=back
+
+=head1 ARGUMENTS
+
+=over
+
+=item I<INTERFACE>
+
+Specifies the interface to show.
+
+=item I<AVG-SECS>
+
+Optional parameter specifying the number of seconds to average, default 1.
+
+=back
+
+=head1 DESCRIPTION
+
+B<ifload> shows the used bandwidth and packets per second of the
+specified network interface in real time.
+
+=head1 AUTHOR
+
+B<ifload> was written by Oliver Hitz <oliver@net-track.ch>.
+
+=head1 LICENSE
+
+Licensed under The MIT License.
+
+=cut
+    
+use Pod::Usage;
+use Getopt::Long;
 use strict;
 
 $|=1;
 
+my $cfg_help;
+
+if (!GetOptions( "help" => \$cfg_help )) {
+  print pod2usage(-verbose => 1);
+  exit 1;
+}
+
+if ($cfg_help) {
+  print pod2usage(-verbose => 2);
+  exit 0;
+}
+
 if ($#ARGV < 0 || $#ARGV > 1) {
-  printf STDERR "Usage: $0 INTERFACE [SECS]\n";
+  print pod2usage(-verbose => 0);
   exit 1;
 }
 
 my $interface = shift @ARGV;
 my $seconds = 1;
 if ($#ARGV == 0) {
-  $seconds = shift @ARGV;
+  $seconds = int(shift @ARGV);
+}
+if ($seconds < 1) {
+  $seconds = 1;
 }
 
-my @l = get_counters($interface);
+my @hist;
+push @hist, [ get_counters($interface) ];
 
 while (1) {
-  sleep $seconds;
+  sleep 1;
 
-  my @c = get_counters($interface);
-  my @t= @c;
-
-  $t[0] -= $l[0];
-  $t[1] -= $l[1];
-  $t[2] -= $l[2];
-  $t[3] -= $l[3];
-
-  @l = @c;
+  my @cur = get_counters($interface);
+  push @hist, [ @cur ];
+  
+  $cur[0] -= $hist[0][0];
+  $cur[1] -= $hist[0][1];
+  $cur[2] -= $hist[0][2];
+  $cur[3] -= $hist[0][3];
 
   print "\r\x1b[K";
   printf "in: %3d mbps (%4d pps), out: %3d mbps (%4d pps)",
-         int(($t[0] * 8) / ($seconds*1024*1024)),
-         int($t[2]/$seconds),
-         int(($t[1] * 8) / ($seconds*1024*1024)),
-         int($t[3]/$seconds);
+         int(($cur[0] * 8) / ($#hist*1024*1024)),
+         int($cur[2]/$#hist),
+         int(($cur[1] * 8) / ($#hist*1024*1024)),
+         int($cur[3]/$#hist);
+  
+  if ($#hist == $seconds) {
+    shift @hist;
+  }
 }
 
 sub get_counters()
