@@ -1,0 +1,45 @@
+=head1 NAME
+
+ifload
+
+=head1 SYNOPSIS
+
+ifload [OPTIONS] I<INTERFACE> [I<AVG-SECS>]
+
+=head1 OPTIONS
+
+=over
+
+=item B<--help>
+
+Show help message.
+
+=back
+
+=head1 ARGUMENTS
+
+=over
+
+=item I<INTERFACE>
+
+Specifies the interface to show.
+
+=item I<AVG-SECS>
+
+Optional parameter specifying the number of seconds to average, default 1.
+
+=back
+
+=head1 DESCRIPTION
+
+B<ifload> shows the used bandwidth and packets per second of the
+specified network interface in real time.
+
+=head1 AUTHOR
+
+B<ifload> was written by Oliver Hitz <oliver@net-track.ch>.
+
+=head1 LICENSE
+
+Licensed under The MIT License.
+
