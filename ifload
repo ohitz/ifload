@@ -9,7 +9,7 @@ ifload
 
 =head1 SYNOPSIS
 
-ifload [OPTIONS] I<INTERFACE> [I<AVG-SECS>]
+ifload [OPTIONS] I<INTERFACE>
 
 =head1 OPTIONS
 
@@ -21,7 +21,11 @@ Show help message.
 
 =item B<--pps>
 
-Also show packets per second.
+Add real-time packets per second.
+
+=item B<--avg>=I<SECS>
+
+Add I<SECS> seconds average.
 
 =back
 
@@ -32,10 +36,6 @@ Also show packets per second.
 =item I<INTERFACE>
 
 Specifies the interface to show.
-
-=item I<AVG-SECS>
-
-Optional parameter specifying the number of seconds to average, default 1.
 
 =back
 
@@ -62,9 +62,11 @@ $|=1;
 
 my $cfg_pps;
 my $cfg_help;
+my $cfg_avg = 1;
 
 if (!GetOptions("help" => \$cfg_help,
-                "pps" => \$cfg_pps)) {
+                "pps" => \$cfg_pps,
+                "avg=i" => \$cfg_avg)) {
   print pod2usage(-verbose => 1);
   exit 1;
 }
@@ -74,19 +76,12 @@ if ($cfg_help) {
   exit 0;
 }
 
-if ($#ARGV < 0 || $#ARGV > 1) {
+if ($#ARGV != 0) {
   print pod2usage(-verbose => 0);
   exit 1;
 }
 
 my $interface = shift @ARGV;
-my $seconds = 1;
-if ($#ARGV == 0) {
-  $seconds = int(shift @ARGV);
-}
-if ($seconds < 1) {
-  $seconds = 1;
-}
 
 my @hist;
 push @hist, [ get_counters($interface) ];
@@ -96,33 +91,35 @@ while (1) {
 
   my @cur = get_counters($interface);
   push @hist, [ @cur ];
-  
-  $cur[0] -= $hist[0][0];
-  $cur[1] -= $hist[0][1];
-  $cur[2] -= $hist[0][2];
-  $cur[3] -= $hist[0][3];
+
+  # real time bandwith (1s avg)
+  my @bw_rt = ( int(8 * ($cur[0] - $hist[$#hist-1][0]) / (1024*1024)),
+                int(8 * ($cur[1] - $hist[$#hist-1][1]) / (1024*1024)) );
+
+  # real time pps (1s avg)
+  my @pps_rt = ( ($cur[2] - $hist[$#hist-1][2]) / 1000,
+                 ($cur[3] - $hist[$#hist-1][3]) / 1000 );
+
+  # avg bandwidth
+  my @bw_avg = ( int(8 * ($cur[0] - $hist[0][0]) / ($#hist*1024*1024)),
+                 int(8 * ($cur[1] - $hist[0][1]) / ($#hist*1024*1024)) );
 
   print "\r\x1b[K";
 
-  my $bw_in = sprintf("%d", int(($cur[0] * 8) / ($#hist*1024*1024)));
-  my $bw_out = sprintf("%d", int(($cur[1] * 8) / ($#hist*1024*1024)));
-
-  my $kpps_in = sprintf("%d", int($cur[2]/($#hist*1000)));
-  my $kpps_out = sprintf("%d", int($cur[3]/($#hist*1000)));
-
-  if ($cfg_pps) {
-      printf("in: %4s mbps (%3s kpps), out: %4s mbps (%3s kpps)",
-             $bw_in,
-             $kpps_in,
-             $bw_out,
-             $kpps_out);
-  } else {
-      printf("in: %4s mbps, out: %4s mbps",
-             $bw_in,
-             $bw_out);
+  my @output;
+  push @output, sprintf("%4d/%4d mbps", $bw_rt[0], $bw_rt[1]);
+  if ($cfg_avg > 1) {
+    push @output, sprintf("%4d/%4d mbps (%ds avg)", $bw_avg[0], $bw_avg[1], $#hist);
   }
+  if ($cfg_pps) {
+    push @output, sprintf("%4d/%4d kpps", $pps_rt[0], $pps_rt[1]);
+  }
+
+  printf("%s (in/out): %s",
+         $interface,
+         join " | ", @output);    
   
-  if ($#hist == $seconds) {
+  if ($#hist == $cfg_avg) {
     shift @hist;
   }
 }

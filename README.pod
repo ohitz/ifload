@@ -4,7 +4,7 @@ ifload
 
 =head1 SYNOPSIS
 
-ifload [OPTIONS] I<INTERFACE> [I<AVG-SECS>]
+ifload [OPTIONS] I<INTERFACE>
 
 =head1 OPTIONS
 
@@ -16,7 +16,11 @@ Show help message.
 
 =item B<--pps>
 
-Also show packets per second.
+Add real-time packets per second.
+
+=item B<--avg>=I<SECS>
+
+Add I<SECS> seconds average.
 
 =back
 
@@ -27,10 +31,6 @@ Also show packets per second.
 =item I<INTERFACE>
 
 Specifies the interface to show.
-
-=item I<AVG-SECS>
-
-Optional parameter specifying the number of seconds to average, default 1.
 
 =back
 
