@@ -19,6 +19,10 @@ ifload [OPTIONS] I<INTERFACE> [I<AVG-SECS>]
 
 Show help message.
 
+=item B<--pps>
+
+Also show packets per second.
+
 =back
 
 =head1 ARGUMENTS
@@ -56,9 +60,11 @@ use strict;
 
 $|=1;
 
+my $cfg_pps;
 my $cfg_help;
 
-if (!GetOptions( "help" => \$cfg_help )) {
+if (!GetOptions("help" => \$cfg_help,
+                "pps" => \$cfg_pps)) {
   print pod2usage(-verbose => 1);
   exit 1;
 }
@@ -97,11 +103,24 @@ while (1) {
   $cur[3] -= $hist[0][3];
 
   print "\r\x1b[K";
-  printf "in: %3d mbps (%4d pps), out: %3d mbps (%4d pps)",
-         int(($cur[0] * 8) / ($#hist*1024*1024)),
-         int($cur[2]/$#hist),
-         int(($cur[1] * 8) / ($#hist*1024*1024)),
-         int($cur[3]/$#hist);
+
+  my $bw_in = sprintf("%d", int(($cur[0] * 8) / ($#hist*1024*1024)));
+  my $bw_out = sprintf("%d", int(($cur[1] * 8) / ($#hist*1024*1024)));
+
+  my $kpps_in = sprintf("%d", int($cur[2]/($#hist*1000)));
+  my $kpps_out = sprintf("%d", int($cur[3]/($#hist*1000)));
+
+  if ($cfg_pps) {
+      printf("in: %4s mbps (%3s kpps), out: %4s mbps (%3s kpps)",
+             $bw_in,
+             $kpps_in,
+             $bw_out,
+             $kpps_out);
+  } else {
+      printf("in: %4s mbps, out: %4s mbps",
+             $bw_in,
+             $bw_out);
+  }
   
   if ($#hist == $seconds) {
     shift @hist;

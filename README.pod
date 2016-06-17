@@ -14,6 +14,10 @@ ifload [OPTIONS] I<INTERFACE> [I<AVG-SECS>]
 
 Show help message.
 
+=item B<--pps>
+
+Also show packets per second.
+
 =back
 
 =head1 ARGUMENTS
